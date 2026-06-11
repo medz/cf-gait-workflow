@@ -6,7 +6,7 @@ import {
   type WorkflowEvent,
 } from "cloudflare:workers";
 import type { Binding, GaitEmittrtWorkerEntrypoint } from "./events";
-import type { Constructor } from "./utils";
+import type { Constructor, MaybePromise } from "./utils";
 
 type CreateGaitParams<T> = {
   binding?: Binding;
@@ -44,15 +44,36 @@ export function createGaitWorkflow<
 type Plan<T> = (
   event: Readonly<WorkflowEvent<T>>,
   gait: Gait,
-) => Promise<unknown>;
+) => MaybePromise<unknown>;
 
 export function defineGaitWorkflowEntrypoint<
   Env = Cloudflare.Env,
   T extends Rpc.Serializable<T> | unknown = unknown,
+>(plan: Plan<T>): Constructor<typeof WorkflowEntrypoint<Env, T>>;
+export function defineGaitWorkflowEntrypoint<
+  Env = Cloudflare.Env,
+  T extends Rpc.Serializable<T> | unknown = unknown,
 >(
-  binding: Binding | undefined,
+  binding: Binding,
   plan: Plan<T>,
+): Constructor<typeof WorkflowEntrypoint<Env, T>>;
+export function defineGaitWorkflowEntrypoint<
+  Env = Cloudflare.Env,
+  T extends Rpc.Serializable<T> | unknown = unknown,
+>(
+  bindingOrPlan: Binding | Plan<T>,
+  nullablePlan?: Plan<T> | void,
 ): Constructor<typeof WorkflowEntrypoint<Env, T>> {
+  const binding = typeof bindingOrPlan === "string" ? bindingOrPlan : void 0;
+  const plan = nullablePlan
+    ? nullablePlan
+    : typeof bindingOrPlan === "function"
+      ? bindingOrPlan
+      : void 0;
+  if (!plan) {
+    throw new Error("// TODO");
+  }
+
   return class extends WorkflowEntrypoint<Env, T> {
     override run(
       event: Readonly<WorkflowEvent<T>>,
