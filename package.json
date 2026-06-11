@@ -1,0 +1,41 @@
+{
+  "name": "cf-gait-workflow",
+  "version": "0.1.0-dev.1",
+  "description": "Lightweight semantic gait tracing helpers for Cloudflare Workflows.",
+  "keywords": [
+    "cloudflare",
+    "workflows",
+    "workers",
+    "trace",
+    "gait"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "workspaces": {
+    "packages": [
+      "playground"
+    ],
+    "catalog": {
+      "typescript": "^6.0.3",
+      "wrangler": "^4.99.0"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260611.1",
+    "tsdown": "^0.22.2",
+    "typescript": "catalog:",
+    "vitest": "^4.1.8"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "example",
+  "compatibility_date": "2026-06-11",
+  "main": "worker.ts",
+  "workflows": [
+    { "name": "emitter", "binding": "GAIT_EMITTER", "class_name": "Workflow" },
+  ],
+}
