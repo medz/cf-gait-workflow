@@ -35,8 +35,8 @@ export abstract class GaitEmittrtWorkerEntrypoint<
 }
 
 type Entrypoints = PickByValue<
-  Cloudflare.Exports,
-  typeof GaitEmittrtWorkerEntrypoint
+  Cloudflare.MainModule,
+  Constructor<typeof GaitEmittrtWorkerEntrypoint<any, any>>
 >;
 
 export type Binding = keyof Entrypoints extends never
