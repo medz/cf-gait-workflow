@@ -75,11 +75,11 @@ export function defineGaitWorkflowEntrypoint<
   }
 
   return class extends WorkflowEntrypoint<Env, T> {
-    override run(
+    override async run(
       event: Readonly<WorkflowEvent<T>>,
       step: WorkflowStep,
     ): Promise<unknown> {
-      return plan(event, createGaitWorkflow({ event, step, binding }));
+      return await plan(event, createGaitWorkflow({ event, step, binding }));
     }
   };
 }
