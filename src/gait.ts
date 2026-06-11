@@ -54,7 +54,7 @@ export function defineGaitWorkflowEntrypoint<
   Env = Cloudflare.Env,
   T extends Rpc.Serializable<T> | unknown = unknown,
 >(
-  binding: Binding,
+  binding: string,
   plan: Plan<T>,
 ): Constructor<typeof WorkflowEntrypoint<Env, T>>;
 export function defineGaitWorkflowEntrypoint<
