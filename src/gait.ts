@@ -6,7 +6,6 @@ import {
   type WorkflowStepContext,
   type WorkflowStep,
   type WorkflowEvent,
-  type WorkflowStepEvent,
   type WorkflowStepRollbackOptions,
   waitUntil,
 } from "cloudflare:workers";
@@ -58,6 +57,16 @@ type Gait = {
   sleep: OmitThisParameter<typeof sleep>;
   event: OmitThisParameter<typeof event>;
 };
+
+export class NonRetryableWithRawError<T> extends NonRetryableError {
+  public constructor(
+    public readonly raw: T,
+    message: string,
+    name?: string,
+  ) {
+    super(message, name);
+  }
+}
 
 export function createGaitWorkflow<
   T extends Rpc.Serializable<T> | unknown = unknown,
@@ -206,7 +215,8 @@ async function sleep<This>(
       }
     } catch (error) {
       this.emit("sleep:error", { error, ...ctx });
-      throw new NonRetryableError(
+      throw new NonRetryableWithRawError(
+        error,
         `Gait sleep step "${name}" failed`,
         "gait:sleep",
       );
@@ -228,7 +238,8 @@ function event<This, T extends Rpc.Serializable<T>>(
       });
     } catch (error) {
       this.emit("event:error", { error, ...ctx });
-      throw new NonRetryableError(
+      throw new NonRetryableWithRawError(
+        error,
         `Gait event step "${name}" failed`,
         "gait:event",
       );
