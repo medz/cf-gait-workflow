@@ -3,30 +3,10 @@ import {
   defineGaitEmitter,
   defineGaitWorkflowEntrypoint,
 } from "../src";
-import type { Args } from "../src/events";
 
-export type RecordedEvent = {
-  event: Args[0];
-  ctx: Args[1];
-};
+export const GaitEmitter = defineGaitEmitter(() => undefined);
 
-const events: RecordedEvent[] = [];
-
-export function clearEvents(): void {
-  events.length = 0;
-}
-
-export function getEvents(): RecordedEvent[] {
-  return structuredClone(events);
-}
-
-export const GaitEmitter = defineGaitEmitter((event, ctx) => {
-  events.push({ event, ctx } as RecordedEvent);
-});
-
-export const CustomEmitter = defineGaitEmitter((event, ctx) => {
-  events.push({ event, ctx } as RecordedEvent);
-});
+export const CustomEmitter = defineGaitEmitter(() => undefined);
 
 export const StepWorkflow = defineGaitWorkflowEntrypoint(
   async (event, gait) => {

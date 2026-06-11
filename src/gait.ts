@@ -192,38 +192,36 @@ async function sleep<This>(
   name: string,
   params: SleepParams,
 ): Promise<void> {
-  const ctx = {
-    step: { name, count: 1 },
-    attempt: 1,
-    config: {},
-  } satisfies WorkflowStepContext;
-  try {
-    this.emit("sleep:start", { params, ...ctx });
-    if (params instanceof Date) {
-      return await this.step
-        .sleepUntil(name, params)
-        .then(() => this.emit("sleep:complete", ctx));
-    } else if (typeof params === "number") {
-      return await this.step
-        .sleep(name, params)
-        .then(() => this.emit("sleep:complete", ctx));
-    } else if ("duration" in params) {
-      return await this.step
-        .sleep(name, params.duration)
-        .then(() => this.emit("sleep:complete", ctx));
-    } else {
-      return await this.step
-        .sleepUntil(name, params.timestamp)
-        .then(() => this.emit("sleep:complete", ctx));
+  await this.step.do(`gait:sleep`, async (ctx) => {
+    try {
+      this.emit("sleep:start", { params, ...ctx });
+
+      if (params instanceof Date) {
+        return await this.step
+          .sleepUntil(name, params)
+          .then(() => this.emit("sleep:complete", ctx));
+      } else if (typeof params === "number") {
+        return await this.step
+          .sleep(name, params)
+          .then(() => this.emit("sleep:complete", ctx));
+      } else if ("duration" in params) {
+        return await this.step
+          .sleep(name, params.duration)
+          .then(() => this.emit("sleep:complete", ctx));
+      } else {
+        return await this.step
+          .sleepUntil(name, params.timestamp)
+          .then(() => this.emit("sleep:complete", ctx));
+      }
+    } catch (error) {
+      this.emit("sleep:error", { error, ...ctx });
+      throw new NonRetryableWithRawError(
+        error,
+        `Gait sleep step "${name}" failed`,
+        "gait:sleep",
+      );
     }
-  } catch (error) {
-    this.emit("sleep:error", { error, ...ctx });
-    throw new NonRetryableWithRawError(
-      error,
-      `Gait sleep step "${name}" failed`,
-      "gait:sleep",
-    );
-  }
+  });
 }
 
 function event<This, T extends Rpc.Serializable<T>>(
