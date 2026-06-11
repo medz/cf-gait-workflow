@@ -3,4 +3,4 @@ export {
   defineGaitEmitter,
   type Binding,
 } from "./events";
-// export { createGait } from "./workflow";
+export { createGait } from "./gait";
