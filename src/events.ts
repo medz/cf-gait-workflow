@@ -29,7 +29,7 @@ type EmitArgs = Values<{
   [K in keyof Defs]: [e: K, ctx: Omit<Ctx<Defs[K]>, "timestamp">];
 }>;
 
-export abstract class GaitEmittrtWorkerEntrypoint<
+export abstract class GaitEmitterWorkerEntrypoint<
   Env = Cloudflare.Env,
   Props = {},
 > extends WorkerEntrypoint<Env, Props> {
@@ -37,9 +37,9 @@ export abstract class GaitEmittrtWorkerEntrypoint<
 }
 
 export function defineGaitEmitter<Env = Cloudflare.Env, Props = {}>(
-  fn: (...arts: OnArgs) => MaybePromise<void>,
-): Constructor<typeof GaitEmittrtWorkerEntrypoint<Env, Props>> {
-  return class extends GaitEmittrtWorkerEntrypoint<Env, Props> {
+  fn: (...args: OnArgs) => MaybePromise<void>,
+): Constructor<typeof GaitEmitterWorkerEntrypoint<Env, Props>> {
+  return class extends GaitEmitterWorkerEntrypoint<Env, Props> {
     emit(...[e, ctx]: EmitArgs): void {
       return this.ctx.waitUntil(
         Promise.try(() =>

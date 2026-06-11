@@ -8,7 +8,7 @@ import {
   type WorkflowEvent,
   type WorkflowStepRollbackOptions,
 } from "cloudflare:workers";
-import type { GaitEmittrtWorkerEntrypoint } from "./events";
+import type { GaitEmitterWorkerEntrypoint } from "./events";
 import type { Constructor, MaybePromise } from "./utils";
 
 type CreateGaitParams<T> = {
@@ -20,7 +20,7 @@ type CreateGaitParams<T> = {
 type Ctx<T> = {
   event: WorkflowEvent<T>;
   step: WorkflowStep;
-  emit: InstanceType<typeof GaitEmittrtWorkerEntrypoint>["emit"];
+  emit: InstanceType<typeof GaitEmitterWorkerEntrypoint>["emit"];
 };
 
 type StepCallback<T extends Rpc.Serializable<T>> = (
@@ -53,10 +53,13 @@ export function createGaitWorkflow<
   step: workflowStep,
   binding = "GaitEmitter",
 }: CreateGaitParams<T>): Gait {
-  const emitter: GaitEmittrtWorkerEntrypoint =
+  const emitter: GaitEmitterWorkerEntrypoint =
     binding in exports && (exports as any)[binding];
   if (!emitter) {
-    throw new NonRetryableError("// TODO", "gait:emitter");
+    throw new NonRetryableError(
+      `Gait emitter binding "${binding}" was not found`,
+      "gait:emitter",
+    );
   }
 
   const ctx = {
@@ -97,7 +100,7 @@ export function defineGaitWorkflowEntrypoint<
       ? bindingOrPlan
       : void 0;
   if (!plan) {
-    throw new Error("// TODO");
+    throw new Error("defineGaitWorkflowEntrypoint requires a plan function");
   }
 
   return class extends WorkflowEntrypoint<Env, T> {
@@ -186,7 +189,10 @@ async function sleep<This>(
       }
     } catch (error) {
       this.emit("sleep:error", { error, ...ctx });
-      throw new NonRetryableError("//TODO", "gait:sleep");
+      throw new NonRetryableError(
+        `Gait sleep step "${name}" failed`,
+        "gait:sleep",
+      );
     } finally {
       this.emit("sleep:complete", ctx);
     }
