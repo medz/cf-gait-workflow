@@ -1,2 +1,2 @@
 export { GaitEmittrtWorkerEntrypoint, defineGaitEmitter } from "./events";
-export { createGait } from "./gait";
+export { createGaitWorkflow, defineGaitWorkflowEntrypoint } from "./gait";

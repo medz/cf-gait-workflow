@@ -2,7 +2,7 @@ import { NonRetryableError } from "cloudflare:workflows";
 import {
   exports,
   WorkflowEntrypoint,
-  WorkflowStep,
+  type WorkflowStep,
   type WorkflowEvent,
 } from "cloudflare:workers";
 import type { Binding, GaitEmittrtWorkerEntrypoint } from "./events";
@@ -24,11 +24,9 @@ type Ctx<T> = {
   emit: InstanceType<typeof GaitEmittrtWorkerEntrypoint>["emit"];
 };
 
-export function createGait<T extends Rpc.Serializable<T> | unknown = unknown>({
-  event,
-  step,
-  binding = "GAIT_EMITTER",
-}: CreateGaitParams<T>): Gait {
+export function createGaitWorkflow<
+  T extends Rpc.Serializable<T> | unknown = unknown,
+>({ event, step, binding = "GAIT_EMITTER" }: CreateGaitParams<T>): Gait {
   const emitter: GaitEmittrtWorkerEntrypoint =
     binding in exports && (exports as any)[binding];
   if (!emitter) {
@@ -60,7 +58,7 @@ export function defineGaitWorkflowEntrypoint<
       event: Readonly<WorkflowEvent<T>>,
       step: WorkflowStep,
     ): Promise<unknown> {
-      return plan(event, createGait({ event, step, binding }));
+      return plan(event, createGaitWorkflow({ event, step, binding }));
     }
   };
 }
