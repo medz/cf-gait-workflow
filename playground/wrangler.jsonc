@@ -3,4 +3,5 @@
   "name": "example",
   "compatibility_date": "2026-06-11",
   "main": "worker.ts",
+  "workflows": [{ "binding": "01", "schedules": [""] }],
 }

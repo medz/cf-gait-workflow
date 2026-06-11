@@ -8,7 +8,11 @@ export const Emitter = defineGaitEmitter((e, ctx) => {
   console.log(e, ctx);
 });
 
-export const WORKFLOWS = defineGaitWorkflowEntrypoint("Emitter", () => {
+export const WORKFLOW1 = defineGaitWorkflowEntrypoint((event, gait) => {
+  return 1;
+});
+
+export const WORKFLOW2 = defineGaitWorkflowEntrypoint("Emitter", () => {
   return 1;
 });
 
