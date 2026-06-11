@@ -1,5 +1,11 @@
 import { WorkerEntrypoint, type WorkflowStepContext } from "cloudflare:workers";
-import type { MaybePromise, Payload, PickByValue, Values } from "./utils";
+import type {
+  Constructor,
+  MaybePromise,
+  Payload,
+  PickByValue,
+  Values,
+} from "./utils";
 
 type Defs = {
   "sleep:start": {
@@ -39,7 +45,7 @@ export type Binding = keyof Entrypoints extends never
 
 export function defineGaitEmitter<Env = Cloudflare.Env, Props = {}>(
   fn: (...arts: OnArgs) => MaybePromise<void>,
-): typeof GaitEmittrtWorkerEntrypoint<Env, Props> {
+): Constructor<typeof GaitEmittrtWorkerEntrypoint<Env, Props>> {
   return class extends GaitEmittrtWorkerEntrypoint<Env, Props> {
     emit(...[e, ctx]: EmitArgs): void {
       return this.ctx.waitUntil(
