@@ -1,24 +1,23 @@
-import { exports, WorkerEntrypoint } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import {
   defineGaitEmitter,
   defineGaitWorkflowEntrypoint,
 } from "cf-gait-workflow";
 
-export const Emitter = defineGaitEmitter((e, ctx) => {
+export const GaitEmitter = defineGaitEmitter((e, ctx) => {
   console.log(e, ctx);
 });
 
-export const WORKFLOW1 = defineGaitWorkflowEntrypoint((event, gait) => {
-  return 1;
+export const Workflow = defineGaitWorkflowEntrypoint(async (event, gait) => {
+  await gait.sleep("Test", 12);
 });
 
-export const WORKFLOW2 = defineGaitWorkflowEntrypoint("Emitter", () => {
-  return 1;
-});
-
-export default class extends WorkerEntrypoint {
-  override async fetch(request: Request): Promise<Response> {
-    exports.Emitter;
-    return Response.json({});
-  }
-}
+export default {
+  async fetch(): Promise<Response> {
+    const instance = await env.GAIT_EMITTER.create();
+    return Response.json({
+      id: instance.id,
+      status: await instance.status(),
+    });
+  },
+} satisfies ExportedHandler;

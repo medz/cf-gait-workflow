@@ -26,7 +26,7 @@ type Ctx<T> = {
 
 export function createGaitWorkflow<
   T extends Rpc.Serializable<T> | unknown = unknown,
->({ event, step, binding = "GAIT_EMITTER" }: CreateGaitParams<T>): Gait {
+>({ event, step, binding = "GaitEmitter" }: CreateGaitParams<T>): Gait {
   const emitter: GaitEmittrtWorkerEntrypoint =
     binding in exports && (exports as any)[binding];
   if (!emitter) {
@@ -36,7 +36,7 @@ export function createGaitWorkflow<
   const ctx = {
     event,
     step,
-    emit: emitter.emit.bind(emitter),
+    emit: emitter.emit,
   } satisfies Ctx<T>;
   return { sleep: sleep.bind(ctx) };
 }
