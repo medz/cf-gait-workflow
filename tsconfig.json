@@ -1,23 +1,7 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "moduleDetection": "auto",
-    "strict": true,
-    "module": "ESNext",
-    "noEmit": true,
-    "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
-    "noImplicitThis": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "isolatedDeclarations": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "esModuleInterop": true,
-    "useUnknownInCatchVariables": true,
-    "noUnusedLocals": true,
-    "types": ["@cloudflare/workers-types"],
-  },
-  "include": ["./src/**/*.ts"],
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.example.json" },
+    { "path": "./tsconfig.project.json" },
+  ],
 }
