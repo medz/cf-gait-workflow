@@ -1,5 +1,10 @@
 import { NonRetryableError } from "cloudflare:workflows";
-import { exports, WorkflowStep, type WorkflowEvent } from "cloudflare:workers";
+import {
+  exports,
+  WorkflowEntrypoint,
+  WorkflowStep,
+  type WorkflowEvent,
+} from "cloudflare:workers";
 import type { Binding, GaitEmittrtWorkerEntrypoint } from "./events";
 
 type CreateGaitParams<T> = {
@@ -36,6 +41,25 @@ export function createGait<T extends Rpc.Serializable<T> | unknown = unknown>({
   } satisfies Ctx<T>;
   return { sleep: sleep.bind(ctx) };
 }
+
+// export abstract class GaitWorkflowEntrypoint<
+//   Env = Cloudflare.Env,
+//   T extends Rpc.Serializable<T> | unknown = unknown,
+// > extends WorkflowEntrypoint<Env, T> {
+//   override async run(
+//     event: Readonly<WorkflowEvent<T>>,
+//     step: WorkflowStep,
+//   ): Promise<unknown> {
+//     const gait = createGait({ event, step, binding: this.binding });
+//     return this.plan(event, gait);
+//   }
+
+//   protected abstract binding: Binding;
+//   protected abstract plan(
+//     event: Readonly<WorkflowEvent<T>>,
+//     gait: Gait,
+//   ): Promise<unknown>;
+// }
 
 async function sleep<This>(
   this: Ctx<This>,
