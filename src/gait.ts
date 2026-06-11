@@ -1,6 +1,12 @@
 import { NonRetryableError } from "cloudflare:workflows";
-import { exports, WorkflowStep, type WorkflowEvent } from "cloudflare:workers";
+import {
+  exports,
+  WorkflowEntrypoint,
+  WorkflowStep,
+  type WorkflowEvent,
+} from "cloudflare:workers";
 import type { Binding, GaitEmittrtWorkerEntrypoint } from "./events";
+import type { Constructor } from "./utils";
 
 type CreateGaitParams<T> = {
   binding?: Binding;
@@ -26,7 +32,7 @@ export function createGait<T extends Rpc.Serializable<T> | unknown = unknown>({
   const emitter: GaitEmittrtWorkerEntrypoint =
     binding in exports && (exports as any)[binding];
   if (!emitter) {
-    throw new NonRetryableError("// TODO", "gait:init");
+    throw new NonRetryableError("// TODO", "gait:emitter");
   }
 
   const ctx = {
@@ -37,24 +43,27 @@ export function createGait<T extends Rpc.Serializable<T> | unknown = unknown>({
   return { sleep: sleep.bind(ctx) };
 }
 
-// export abstract class GaitWorkflowEntrypoint<
-//   Env = Cloudflare.Env,
-//   T extends Rpc.Serializable<T> | unknown = unknown,
-// > extends WorkflowEntrypoint<Env, T> {
-//   override async run(
-//     event: Readonly<WorkflowEvent<T>>,
-//     step: WorkflowStep,
-//   ): Promise<unknown> {
-//     const gait = createGait({ event, step, binding: this.binding });
-//     return this.plan(event, gait);
-//   }
+type Plan<T> = (
+  event: Readonly<WorkflowEvent<T>>,
+  gait: Gait,
+) => Promise<unknown>;
 
-//   protected abstract binding: Binding;
-//   protected abstract plan(
-//     event: Readonly<WorkflowEvent<T>>,
-//     gait: Gait,
-//   ): Promise<unknown>;
-// }
+export function defineGaitWorkflowEntrypoint<
+  Env = Cloudflare.Env,
+  T extends Rpc.Serializable<T> | unknown = unknown,
+>(
+  binding: Binding | undefined,
+  plan: Plan<T>,
+): Constructor<typeof WorkflowEntrypoint<Env, T>> {
+  return class extends WorkflowEntrypoint<Env, T> {
+    override run(
+      event: Readonly<WorkflowEvent<T>>,
+      step: WorkflowStep,
+    ): Promise<unknown> {
+      return plan(event, createGait({ event, step, binding }));
+    }
+  };
+}
 
 async function sleep<This>(
   this: Ctx<This>,
@@ -66,15 +75,15 @@ async function sleep<This>(
     | { timestamp: Date | number },
 ): Promise<void> {
   await this.step.do(`gait:sleep`, async (ctx) => {
-    this.emit("sleep:start", { params, ...ctx });
     try {
+      this.emit("sleep:start", { params, ...ctx });
       if (params instanceof Date) return this.step.sleepUntil(name, params);
       if (typeof params === "number") return this.step.sleep(name, params);
       if ("duration" in params) return this.step.sleep(name, params.duration);
       return this.step.sleepUntil(name, params.timestamp);
     } catch (error) {
       this.emit("sleep:error", { error, ...ctx });
-      throw error;
+      throw new NonRetryableError("//TODO", "gait:sleep");
     } finally {
       this.emit("sleep:complete", ctx);
     }
