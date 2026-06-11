@@ -1,5 +1,5 @@
 {
-  "name": "cf-workflow-gait",
+  "name": "cf-gait-workflow",
   "version": "0.1.0",
   "description": "Lightweight semantic gait tracing helpers for Cloudflare Workflows.",
   "keywords": [
@@ -17,7 +17,9 @@
   },
   "scripts": {
     "build": "tsdown",
-    "dev": "tsdown --watch"
+    "dev": "tsdown --watch",
+    "example:typegen": "wrangler types --cwd example",
+    "example:dev": "wrangler dev --cwd example"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260611.1",
