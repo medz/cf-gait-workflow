@@ -1,6 +1,6 @@
 {
   "name": "cf-gait-workflow",
-  "version": "0.1.0",
+  "version": "0.1.0-dev.1",
   "description": "Lightweight semantic gait tracing helpers for Cloudflare Workflows.",
   "keywords": [
     "cloudflare",
@@ -11,6 +11,10 @@
   ],
   "license": "MIT",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
     "./package.json": "./package.json"

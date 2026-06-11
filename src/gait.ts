@@ -161,12 +161,13 @@ async function step<This, T extends Rpc.Serializable<T>>(
   const wrappedCallback: StepCallback<T> = async (ctx) => {
     try {
       this.emit("step:start", ctx);
-      return await callback(ctx);
+      return await callback(ctx).then((output) => {
+        this.emit("step:complete", { ...ctx, output });
+        return output;
+      });
     } catch (error) {
       this.emit("step:error", { error, ...ctx });
       throw error;
-    } finally {
-      this.emit("step:complete", ctx);
     }
   };
 
@@ -187,13 +188,21 @@ async function sleep<This>(
       this.emit("sleep:start", { params, ...ctx });
 
       if (params instanceof Date) {
-        return await this.step.sleepUntil(name, params);
+        return await this.step
+          .sleepUntil(name, params)
+          .then(() => this.emit("sleep:complete", ctx));
       } else if (typeof params === "number") {
-        return await this.step.sleep(name, params);
+        return await this.step
+          .sleep(name, params)
+          .then(() => this.emit("sleep:complete", ctx));
       } else if ("duration" in params) {
-        return await this.step.sleep(name, params.duration);
+        return await this.step
+          .sleep(name, params.duration)
+          .then(() => this.emit("sleep:complete", ctx));
       } else {
-        return await this.step.sleepUntil(name, params.timestamp);
+        return await this.step
+          .sleepUntil(name, params.timestamp)
+          .then(() => this.emit("sleep:complete", ctx));
       }
     } catch (error) {
       this.emit("sleep:error", { error, ...ctx });
@@ -201,34 +210,30 @@ async function sleep<This>(
         `Gait sleep step "${name}" failed`,
         "gait:sleep",
       );
-    } finally {
-      this.emit("sleep:complete", ctx);
     }
   });
 }
 
-async function event<This, T extends Rpc.Serializable<T>>(
+function event<This, T extends Rpc.Serializable<T>>(
   this: Ctx<This>,
   name: string,
   options: GaitEventOptions,
-): Promise<WorkflowStepEvent<T>> {
-  return (await this.step.do(`gait:event`, async (ctx) => {
+) {
+  return this.step.do<any>(name, { timeout: options.timeout }, async (ctx) => {
+    this.emit("event:start", { options, ...ctx });
     try {
-      this.emit("event:start", { options, ...ctx });
-      return (await this.step.waitForEvent<T>(
-        name,
-        options,
-      )) as Rpc.Serializable<WorkflowStepEvent<T>>;
+      return await this.step.waitForEvent<T>(name, options).then((output) => {
+        this.emit("event:complete", { ...ctx, output });
+        return output;
+      });
     } catch (error) {
       this.emit("event:error", { error, ...ctx });
       throw new NonRetryableError(
         `Gait event step "${name}" failed`,
         "gait:event",
       );
-    } finally {
-      this.emit("event:complete", ctx);
     }
-  })) as WorkflowStepEvent<T>;
+  });
 }
 
 type WithoutTimestamp<T> = T extends [
