@@ -2,20 +2,19 @@ import { NonRetryableError } from "cloudflare:workflows";
 import {
   exports,
   WorkflowEntrypoint,
+  type WorkflowStepConfig,
+  type WorkflowStepContext,
   type WorkflowStep,
   type WorkflowEvent,
+  type WorkflowStepRollbackOptions,
 } from "cloudflare:workers";
-import type { Binding, GaitEmittrtWorkerEntrypoint } from "./events";
+import type { GaitEmittrtWorkerEntrypoint } from "./events";
 import type { Constructor, MaybePromise } from "./utils";
 
 type CreateGaitParams<T> = {
-  binding?: Binding;
+  binding?: string;
   event: WorkflowEvent<T>;
   step: WorkflowStep;
-};
-
-type Gait = {
-  sleep: OmitThisParameter<typeof sleep>;
 };
 
 type Ctx<T> = {
@@ -24,9 +23,36 @@ type Ctx<T> = {
   emit: InstanceType<typeof GaitEmittrtWorkerEntrypoint>["emit"];
 };
 
+type StepCallback<T extends Rpc.Serializable<T>> = (
+  ctx: WorkflowStepContext,
+) => Promise<T>;
+
+type GaitStep = {
+  <T extends Rpc.Serializable<T>>(
+    name: string,
+    callback: StepCallback<T>,
+    rollbackOptions?: WorkflowStepRollbackOptions<T>,
+  ): Promise<T>;
+  <T extends Rpc.Serializable<T>>(
+    name: string,
+    config: WorkflowStepConfig,
+    callback: StepCallback<T>,
+    rollbackOptions?: WorkflowStepRollbackOptions<T>,
+  ): Promise<T>;
+};
+
+type Gait = {
+  step: GaitStep;
+  sleep: OmitThisParameter<typeof sleep>;
+};
+
 export function createGaitWorkflow<
   T extends Rpc.Serializable<T> | unknown = unknown,
->({ event, step, binding = "GaitEmitter" }: CreateGaitParams<T>): Gait {
+>({
+  event,
+  step: workflowStep,
+  binding = "GaitEmitter",
+}: CreateGaitParams<T>): Gait {
   const emitter: GaitEmittrtWorkerEntrypoint =
     binding in exports && (exports as any)[binding];
   if (!emitter) {
@@ -35,10 +61,10 @@ export function createGaitWorkflow<
 
   const ctx = {
     event,
-    step,
+    step: workflowStep,
     emit: emitter.emit,
   } satisfies Ctx<T>;
-  return { sleep: sleep.bind(ctx) };
+  return { step: step.bind(ctx) as GaitStep, sleep: sleep.bind(ctx) };
 }
 
 type Plan<T> = (
@@ -61,7 +87,7 @@ export function defineGaitWorkflowEntrypoint<
   Env = Cloudflare.Env,
   T extends Rpc.Serializable<T> | unknown = unknown,
 >(
-  bindingOrPlan: Binding | Plan<T>,
+  bindingOrPlan: string | Plan<T>,
   nullablePlan?: Plan<T> | void,
 ): Constructor<typeof WorkflowEntrypoint<Env, T>> {
   const binding = typeof bindingOrPlan === "string" ? bindingOrPlan : void 0;
@@ -82,6 +108,58 @@ export function defineGaitWorkflowEntrypoint<
       return await plan(event, createGaitWorkflow({ event, step, binding }));
     }
   };
+}
+
+async function step<This, T extends Rpc.Serializable<T>>(
+  this: Ctx<This>,
+  name: string,
+  callback: StepCallback<T>,
+  rollbackOptions?: WorkflowStepRollbackOptions<T>,
+): Promise<T>;
+async function step<This, T extends Rpc.Serializable<T>>(
+  this: Ctx<This>,
+  name: string,
+  config: WorkflowStepConfig,
+  callback: StepCallback<T>,
+  rollbackOptions?: WorkflowStepRollbackOptions<T>,
+): Promise<T>;
+async function step<This, T extends Rpc.Serializable<T>>(
+  this: Ctx<This>,
+  name: string,
+  configOrCallback: WorkflowStepConfig | StepCallback<T>,
+  callbackOrRollbackOptions?: StepCallback<T> | WorkflowStepRollbackOptions<T>,
+  rollbackOptions?: WorkflowStepRollbackOptions<T>,
+): Promise<T> {
+  const hasConfig = typeof configOrCallback !== "function";
+  const callback = hasConfig
+    ? (callbackOrRollbackOptions as StepCallback<T>)
+    : configOrCallback;
+  const options = hasConfig
+    ? rollbackOptions
+    : (callbackOrRollbackOptions as WorkflowStepRollbackOptions<T> | undefined);
+
+  const wrappedCallback: StepCallback<T> = async (ctx) => {
+    try {
+      this.emit("step:start", ctx);
+      return await callback(ctx);
+    } catch (error) {
+      this.emit("step:error", { error, ...ctx });
+      throw error;
+    } finally {
+      this.emit("step:complete", ctx);
+    }
+  };
+
+  if (hasConfig) {
+    return await this.step.do(
+      name,
+      configOrCallback,
+      wrappedCallback,
+      options,
+    );
+  }
+
+  return await this.step.do(name, wrappedCallback, options);
 }
 
 async function sleep<This>(

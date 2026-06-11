@@ -3,11 +3,13 @@ import type {
   Constructor,
   MaybePromise,
   Payload,
-  PickByValue,
   Values,
 } from "./utils";
 
 type Defs = {
+  "step:start": {};
+  "step:error": { error: unknown };
+  "step:complete": {};
   "sleep:start": {
     params:
       | number
@@ -33,15 +35,6 @@ export abstract class GaitEmittrtWorkerEntrypoint<
 > extends WorkerEntrypoint<Env, Props> {
   abstract emit(...args: EmitArgs): void;
 }
-
-type Entrypoints = PickByValue<
-  Cloudflare.MainModule,
-  Constructor<typeof GaitEmittrtWorkerEntrypoint<any, any>>
->;
-
-export type Binding = keyof Entrypoints extends never
-  ? string
-  : keyof Entrypoints;
 
 export function defineGaitEmitter<Env = Cloudflare.Env, Props = {}>(
   fn: (...arts: OnArgs) => MaybePromise<void>,

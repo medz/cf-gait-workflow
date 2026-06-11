@@ -12,6 +12,8 @@ structured telemetry for logging, diagnostics, or custom observers.
 - Define a typed gait event emitter with `defineGaitEmitter`.
 - Define a Workflow entrypoint with `defineGaitWorkflowEntrypoint`.
 - Create a gait helper inside an existing workflow with `createGaitWorkflow`.
+- Trace Workflow steps with `step:start`, `step:error`, and `step:complete`
+  events.
 - Trace sleep operations with `sleep:start`, `sleep:error`, and
   `sleep:complete` events.
 - Keep Cloudflare-specific imports external in the published ESM build.
@@ -41,14 +43,39 @@ export const GaitEmitter = defineGaitEmitter((event, ctx) => {
 });
 
 export const Workflow = defineGaitWorkflowEntrypoint(async (event, gait) => {
+  const result = await gait.step("Fetch data", async () => {
+    return { ok: true };
+  });
+
+  console.log(result);
   await gait.sleep("Wait before continuing", 60);
 });
 ```
 
 The workflow wrapper creates a gait helper for each Workflow run and passes it
-to your plan function. The current helper exposes `sleep`, which delegates to
-Cloudflare Workflows `step.sleep` or `step.sleepUntil` and emits lifecycle
-events through the configured gait emitter.
+to your plan function. The helper exposes `step`, which delegates to Cloudflare
+Workflows `step.do`, and `sleep`, which delegates to `step.sleep` or
+`step.sleepUntil`. Both helpers emit lifecycle events through the configured
+gait emitter.
+
+### Step inputs
+
+`gait.step` mirrors Cloudflare Workflows `step.do`:
+
+```ts
+await gait.step("plain step", async (ctx) => {
+  console.log(ctx.attempt);
+  return { ok: true };
+});
+
+await gait.step(
+  "configured step",
+  { retries: { limit: 3, delay: "10 seconds" } },
+  async () => {
+    return "done";
+  },
+);
+```
 
 ### Sleep inputs
 

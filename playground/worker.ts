@@ -9,6 +9,9 @@ export const GaitEmitter = defineGaitEmitter((e, ctx) => {
 });
 
 export const Workflow = defineGaitWorkflowEntrypoint(async (event, gait) => {
+  await gait.step("Test step", async () => {
+    return { instanceId: event.instanceId };
+  });
   await gait.sleep("Test", 12);
 });
 
