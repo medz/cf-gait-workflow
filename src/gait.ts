@@ -26,7 +26,7 @@ type CreateGaitParams<T> = {
 type Ctx<T> = {
   event: WorkflowEvent<T>;
   step: WorkflowStep;
-  emit: GaitEmit;
+  emit: OmitThisParameter<typeof emit>;
 };
 
 type SleepParams =
@@ -34,24 +34,6 @@ type SleepParams =
   | Date
   | { duration: WorkflowSleepDuration }
   | { timestamp: Date | number };
-
-type GaitEmit = {
-  (event: "step:start", ctx: WorkflowStepContext): void;
-  (event: "step:error", ctx: WorkflowStepContext & { error: unknown }): void;
-  (event: "step:complete", ctx: WorkflowStepContext): void;
-  (
-    event: "sleep:start",
-    ctx: WorkflowStepContext & { params: SleepParams },
-  ): void;
-  (event: "sleep:error", ctx: WorkflowStepContext & { error: unknown }): void;
-  (event: "sleep:complete", ctx: WorkflowStepContext): void;
-  (
-    event: "event:start",
-    ctx: WorkflowStepContext & { options: GaitEventOptions },
-  ): void;
-  (event: "event:error", ctx: WorkflowStepContext & { error: unknown }): void;
-  (event: "event:complete", ctx: WorkflowStepContext): void;
-};
 
 type StepCallback<T extends Rpc.Serializable<T>> = (
   ctx: WorkflowStepContext,
