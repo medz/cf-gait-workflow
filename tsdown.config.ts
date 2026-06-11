@@ -1,8 +1,8 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: "src/index.ts",
-  dts: { tsconfig: "tsconfig.project.json" },
+  entry: "./src/index.ts",
+  dts: true,
   exports: true,
   format: "esm",
   minify: false,

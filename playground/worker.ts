@@ -6,7 +6,7 @@ export const Emitter = defineGaitEmitter((e, ctx) => {
 });
 
 export default class extends WorkerEntrypoint {
-  async fetch(request: Request): Promise<Response> {
+  override async fetch(request: Request): Promise<Response> {
     exports.Emitter;
     return Response.json({});
   }

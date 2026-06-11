@@ -15,17 +15,22 @@
     ".": "./dist/index.js",
     "./package.json": "./package.json"
   },
+  "workspaces": {
+    "packages": [
+      "playground"
+    ],
+    "catalog": {
+      "typescript": "^6.0.3",
+      "wrangler": "^4.99.0"
+    }
+  },
   "scripts": {
     "build": "tsdown",
-    "dev": "tsdown --watch",
-    "example:typegen": "wrangler types --cwd example",
-    "example:dev": "wrangler dev --cwd example"
+    "dev": "tsdown --watch"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260611.1",
     "tsdown": "^0.22.2",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
-    "wrangler": "^4.99.0"
+    "typescript": "catalog:",
+    "vitest": "^4.1.8"
   }
 }

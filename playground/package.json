@@ -1,0 +1,12 @@
+{
+  "name": "playground",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
