@@ -1,0 +1,33 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "cf-gait-workflow-test",
+  "main": "worker.ts",
+  "compatibility_date": "2026-06-11",
+  "workflows": [
+    {
+      "name": "step-workflow",
+      "binding": "STEP_WORKFLOW",
+      "class_name": "StepWorkflow",
+    },
+    {
+      "name": "custom-binding-workflow",
+      "binding": "CUSTOM_BINDING_WORKFLOW",
+      "class_name": "CustomBindingWorkflow",
+    },
+    {
+      "name": "sleep-workflow",
+      "binding": "SLEEP_WORKFLOW",
+      "class_name": "SleepWorkflow",
+    },
+    {
+      "name": "event-workflow",
+      "binding": "EVENT_WORKFLOW",
+      "class_name": "EventWorkflow",
+    },
+    {
+      "name": "event-timeout-workflow",
+      "binding": "EVENT_TIMEOUT_WORKFLOW",
+      "class_name": "EventTimeoutWorkflow",
+    },
+  ],
+}

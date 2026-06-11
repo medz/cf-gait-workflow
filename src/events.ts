@@ -6,7 +6,7 @@ export type GaitEventOptions = {
   timeout?: WorkflowSleepDuration | number;
 };
 
-type Defs = Record<"step:start" | "sleep:complete", void> &
+type Defs = Record<"step:start" | "sleep:complete", {}> &
   Record<"step:error" | "sleep:error" | "event:error", { error: unknown }> &
   Record<"step:complete" | "event:complete", { output: unknown }> & {
     "sleep:start": {
