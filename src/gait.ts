@@ -8,7 +8,7 @@ import {
   type WorkflowEvent,
   type WorkflowStepRollbackOptions,
 } from "cloudflare:workers";
-import type { GaitEmitterWorkerEntrypoint } from "./events";
+import type { Args, GaitEmitterWorkerEntrypoint } from "./events";
 import type { Constructor, MaybePromise } from "./utils";
 
 type CreateGaitParams<T> = {
@@ -20,7 +20,25 @@ type CreateGaitParams<T> = {
 type Ctx<T> = {
   event: WorkflowEvent<T>;
   step: WorkflowStep;
-  emit: InstanceType<typeof GaitEmitterWorkerEntrypoint>["emit"];
+  emit: GaitEmit;
+};
+
+type SleepParams =
+  | number
+  | Date
+  | { duration: WorkflowSleepDuration }
+  | { timestamp: Date | number };
+
+type GaitEmit = {
+  (event: "step:start", ctx: WorkflowStepContext): void;
+  (event: "step:error", ctx: WorkflowStepContext & { error: unknown }): void;
+  (event: "step:complete", ctx: WorkflowStepContext): void;
+  (
+    event: "sleep:start",
+    ctx: WorkflowStepContext & { params: SleepParams },
+  ): void;
+  (event: "sleep:error", ctx: WorkflowStepContext & { error: unknown }): void;
+  (event: "sleep:complete", ctx: WorkflowStepContext): void;
 };
 
 type StepCallback<T extends Rpc.Serializable<T>> = (
@@ -62,10 +80,18 @@ export function createGaitWorkflow<
     );
   }
 
+  const emit: GaitEmit = (...[event, ctx]) => {
+    emitter.emit(
+      ...([event, { ...ctx, timestamp: Date.now() }] as Parameters<
+        typeof emitter.emit
+      >),
+    );
+  };
+
   const ctx = {
     event,
     step: workflowStep,
-    emit: emitter.emit,
+    emit,
   } satisfies Ctx<T>;
   return { step: step.bind(ctx) as GaitStep, sleep: sleep.bind(ctx) };
 }
@@ -154,12 +180,7 @@ async function step<This, T extends Rpc.Serializable<T>>(
   };
 
   if (hasConfig) {
-    return await this.step.do(
-      name,
-      configOrCallback,
-      wrappedCallback,
-      options,
-    );
+    return await this.step.do(name, configOrCallback, wrappedCallback, options);
   }
 
   return await this.step.do(name, wrappedCallback, options);
@@ -168,11 +189,7 @@ async function step<This, T extends Rpc.Serializable<T>>(
 async function sleep<This>(
   this: Ctx<This>,
   name: string,
-  params:
-    | number
-    | Date
-    | { duration: WorkflowSleepDuration }
-    | { timestamp: Date | number },
+  params: SleepParams,
 ): Promise<void> {
   await this.step.do(`gait:sleep`, async (ctx) => {
     try {
@@ -197,4 +214,19 @@ async function sleep<This>(
       this.emit("sleep:complete", ctx);
     }
   });
+}
+
+type EmitArgs = {
+  [K in keyof Args]: Args[K] extends [
+    infer E,
+    infer Ctx extends { timestamp: number },
+  ]
+    ? [E, Omit<Ctx, "timestamp">]
+    : Args[K];
+};
+function emit(
+  this: Pick<GaitEmitterWorkerEntrypoint, "emit">,
+  ...[e, ctx]: EmitArgs
+) {
+  ctx.timestamp;
 }
