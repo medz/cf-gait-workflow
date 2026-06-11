@@ -96,10 +96,16 @@ async function sleep<This>(
   await this.step.do(`gait:sleep`, async (ctx) => {
     try {
       this.emit("sleep:start", { params, ...ctx });
-      if (params instanceof Date) return this.step.sleepUntil(name, params);
-      if (typeof params === "number") return this.step.sleep(name, params);
-      if ("duration" in params) return this.step.sleep(name, params.duration);
-      return this.step.sleepUntil(name, params.timestamp);
+
+      if (params instanceof Date) {
+        return await this.step.sleepUntil(name, params);
+      } else if (typeof params === "number") {
+        return await this.step.sleep(name, params);
+      } else if ("duration" in params) {
+        return await this.step.sleep(name, params.duration);
+      } else {
+        return await this.step.sleepUntil(name, params.timestamp);
+      }
     } catch (error) {
       this.emit("sleep:error", { error, ...ctx });
       throw new NonRetryableError("//TODO", "gait:sleep");
