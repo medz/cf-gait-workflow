@@ -6,10 +6,15 @@ import {
   type WorkflowStepContext,
   type WorkflowStep,
   type WorkflowEvent,
+  type WorkflowStepEvent,
   type WorkflowStepRollbackOptions,
   waitUntil,
 } from "cloudflare:workers";
-import type { Args, GaitEmitterWorkerEntrypoint } from "./events";
+import type {
+  Args,
+  GaitEmitterWorkerEntrypoint,
+  GaitEventOptions,
+} from "./events";
 import type { Constructor, MaybePromise } from "./utils";
 
 type CreateGaitParams<T> = {
@@ -40,6 +45,12 @@ type GaitEmit = {
   ): void;
   (event: "sleep:error", ctx: WorkflowStepContext & { error: unknown }): void;
   (event: "sleep:complete", ctx: WorkflowStepContext): void;
+  (
+    event: "event:start",
+    ctx: WorkflowStepContext & { options: GaitEventOptions },
+  ): void;
+  (event: "event:error", ctx: WorkflowStepContext & { error: unknown }): void;
+  (event: "event:complete", ctx: WorkflowStepContext): void;
 };
 
 type StepCallback<T extends Rpc.Serializable<T>> = (
@@ -63,12 +74,13 @@ type GaitStep = {
 type Gait = {
   step: GaitStep;
   sleep: OmitThisParameter<typeof sleep>;
+  event: OmitThisParameter<typeof event>;
 };
 
 export function createGaitWorkflow<
   T extends Rpc.Serializable<T> | unknown = unknown,
 >({
-  event,
+  event: workflowEvent,
   step: workflowStep,
   binding = "GaitEmitter",
 }: CreateGaitParams<T>): Gait {
@@ -82,11 +94,15 @@ export function createGaitWorkflow<
   }
 
   const ctx = {
-    event,
+    event: workflowEvent,
     step: workflowStep,
     emit: emit.bind(emitter),
   } satisfies Ctx<T>;
-  return { step: step.bind(ctx) as GaitStep, sleep: sleep.bind(ctx) };
+  return {
+    step: step.bind(ctx) as GaitStep,
+    sleep: sleep.bind(ctx),
+    event: event.bind(ctx),
+  };
 }
 
 type Plan<T> = (
@@ -207,6 +223,30 @@ async function sleep<This>(
       this.emit("sleep:complete", ctx);
     }
   });
+}
+
+async function event<This, T extends Rpc.Serializable<T>>(
+  this: Ctx<This>,
+  name: string,
+  options: GaitEventOptions,
+): Promise<WorkflowStepEvent<T>> {
+  return (await this.step.do(`gait:event`, async (ctx) => {
+    try {
+      this.emit("event:start", { options, ...ctx });
+      return (await this.step.waitForEvent<T>(
+        name,
+        options,
+      )) as Rpc.Serializable<WorkflowStepEvent<T>>;
+    } catch (error) {
+      this.emit("event:error", { error, ...ctx });
+      throw new NonRetryableError(
+        `Gait event step "${name}" failed`,
+        "gait:event",
+      );
+    } finally {
+      this.emit("event:complete", ctx);
+    }
+  })) as WorkflowStepEvent<T>;
 }
 
 type WithoutTimestamp<T> = T extends [

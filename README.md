@@ -16,6 +16,8 @@ structured telemetry for logging, diagnostics, or custom observers.
   events.
 - Trace sleep operations with `sleep:start`, `sleep:error`, and
   `sleep:complete` events.
+- Trace Workflow event waits with `event:start`, `event:error`, and
+  `event:complete` events.
 - Keep Cloudflare-specific imports external in the published ESM build.
 
 ## Install
@@ -75,6 +77,19 @@ await gait.step(
     return "done";
   },
 );
+```
+
+### Event inputs
+
+`gait.event` delegates to Cloudflare Workflows `step.waitForEvent`:
+
+```ts
+const approval = await gait.event("wait for approval", {
+  type: "approval",
+  timeout: "1 hour",
+});
+
+console.log(approval.payload);
 ```
 
 ### Sleep inputs

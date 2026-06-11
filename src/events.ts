@@ -1,8 +1,16 @@
 import { WorkerEntrypoint, type WorkflowStepContext } from "cloudflare:workers";
 import type { Constructor, MaybePromise, Payload, Values } from "./utils";
 
-type Defs = Record<"step:start" | "step:complete" | "sleep:complete", void> &
-  Record<"step:error" | "sleep:error", { error: unknown }> & {
+export type GaitEventOptions = {
+  type: string;
+  timeout?: WorkflowSleepDuration | number;
+};
+
+type Defs = Record<
+  "step:start" | "step:complete" | "sleep:complete" | "event:complete",
+  void
+> &
+  Record<"step:error" | "sleep:error" | "event:error", { error: unknown }> & {
     "sleep:start": {
       params:
         | number
@@ -10,6 +18,7 @@ type Defs = Record<"step:start" | "step:complete" | "sleep:complete", void> &
         | { duration: WorkflowSleepDuration }
         | { timestamp: Date | number };
     };
+    "event:start": { options: GaitEventOptions };
   };
 
 type Ctx<T> = WorkflowStepContext & Payload<T> & { timestamp: number };
