@@ -7,6 +7,7 @@ import {
   type WorkflowStep,
   type WorkflowEvent,
   type WorkflowStepRollbackOptions,
+  waitUntil,
 } from "cloudflare:workers";
 import type { Args, GaitEmitterWorkerEntrypoint } from "./events";
 import type { Constructor, MaybePromise } from "./utils";
@@ -80,18 +81,10 @@ export function createGaitWorkflow<
     );
   }
 
-  const emit: GaitEmit = (...[event, ctx]) => {
-    emitter.emit(
-      ...([event, { ...ctx, timestamp: Date.now() }] as Parameters<
-        typeof emitter.emit
-      >),
-    );
-  };
-
   const ctx = {
     event,
     step: workflowStep,
-    emit,
+    emit: emit.bind(emitter),
   } satisfies Ctx<T>;
   return { step: step.bind(ctx) as GaitStep, sleep: sleep.bind(ctx) };
 }
@@ -216,17 +209,20 @@ async function sleep<This>(
   });
 }
 
-type EmitArgs = {
-  [K in keyof Args]: Args[K] extends [
-    infer E,
-    infer Ctx extends { timestamp: number },
-  ]
-    ? [E, Omit<Ctx, "timestamp">]
-    : Args[K];
-};
+type WithoutTimestamp<T> = T extends [
+  infer E,
+  infer C extends { timestamp: number },
+]
+  ? [E, Omit<C, "timestamp">]
+  : never;
+type EmitArgs = WithoutTimestamp<Args>;
 function emit(
   this: Pick<GaitEmitterWorkerEntrypoint, "emit">,
   ...[e, ctx]: EmitArgs
 ) {
-  ctx.timestamp;
+  return waitUntil(
+    Promise.resolve(
+      this.emit(...([e, { ...ctx, timestamp: Date.now() }] as Args)),
+    ),
+  );
 }

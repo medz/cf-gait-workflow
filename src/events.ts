@@ -1,20 +1,16 @@
 import { WorkerEntrypoint, type WorkflowStepContext } from "cloudflare:workers";
 import type { Constructor, MaybePromise, Payload, Values } from "./utils";
 
-type Defs = {
-  "step:start": {};
-  "step:error": { error: unknown };
-  "step:complete": {};
-  "sleep:start": {
-    params:
-      | number
-      | Date
-      | { duration: WorkflowSleepDuration }
-      | { timestamp: Date | number };
+type Defs = Record<"step:start" | "step:complete" | "sleep:complete", void> &
+  Record<"step:error" | "sleep:error", { error: unknown }> & {
+    "sleep:start": {
+      params:
+        | number
+        | Date
+        | { duration: WorkflowSleepDuration }
+        | { timestamp: Date | number };
+    };
   };
-  "sleep:error": { error: unknown };
-  "sleep:complete": {};
-};
 
 type Ctx<T> = WorkflowStepContext & Payload<T> & { timestamp: number };
 export type Args = Values<{
