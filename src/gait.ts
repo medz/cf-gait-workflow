@@ -1,10 +1,5 @@
 import { NonRetryableError } from "cloudflare:workflows";
-import {
-  exports,
-  WorkflowEntrypoint,
-  WorkflowStep,
-  type WorkflowEvent,
-} from "cloudflare:workers";
+import { exports, WorkflowStep, type WorkflowEvent } from "cloudflare:workers";
 import type { Binding, GaitEmittrtWorkerEntrypoint } from "./events";
 
 type CreateGaitParams<T> = {

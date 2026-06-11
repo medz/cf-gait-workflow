@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "types": ["./worker-configuration.d.ts"],
     "paths": { "cf-gait-workflow": ["../src/index.ts"] },

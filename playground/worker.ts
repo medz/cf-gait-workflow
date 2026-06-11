@@ -1,5 +1,5 @@
 import { exports, WorkerEntrypoint } from "cloudflare:workers";
-import { defineGaitEmitter, type Binding } from "cf-gait-workflow";
+import { defineGaitEmitter } from "cf-gait-workflow";
 
 export const Emitter = defineGaitEmitter((e, ctx) => {
   console.log(e, ctx);
