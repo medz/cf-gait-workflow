@@ -5,6 +5,10 @@ export default defineConfig({
   dts: true,
   exports: true,
   format: "esm",
-  minify: true,
+  minify: false,
   platform: "neutral",
+  deps: {
+    neverBundle: [/^cloudflare\:/],
+    skipNodeModulesBundle: true,
+  },
 });
