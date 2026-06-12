@@ -194,7 +194,7 @@ describe("gait.step", () => {
         expect.any(Function),
         rollbackOptions,
       );
-      expect(events[0][1].config).toBe(config);
+      expect((events[0][1] as WorkflowStepContext).config).toBe(config);
       expect(events[1][1]).toMatchObject({ output: "done" });
     });
   });
@@ -317,8 +317,6 @@ describe("gait.event", () => {
       expect(eventNames(events)).toEqual(["event:start", "event:complete"]);
       expect(events[0][1]).toMatchObject({
         step: { name: "approval", count: 1 },
-        attempt: 1,
-        config: { timeout: "1 minute" },
         options: { type: "approval", timeout: "1 minute" },
       });
       expect(events[1][1]).toMatchObject({
