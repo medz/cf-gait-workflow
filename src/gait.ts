@@ -11,10 +11,11 @@ import {
 } from "cloudflare:workers";
 import type {
   Args,
+  Defs,
   GaitEmitterWorkerEntrypoint,
   GaitEventOptions,
 } from "./events";
-import type { Constructor, MaybePromise } from "./utils";
+import type { Constructor, MaybePromise, Values } from "./utils";
 
 type CreateGaitParams<T> = {
   binding?: string;
@@ -167,7 +168,7 @@ async function step<This, T extends Rpc.Serializable<T>>(
     ? rollbackOptions
     : (callbackOrRollbackOptions as WorkflowStepRollbackOptions<T> | undefined);
 
-  const wrappedCallback: StepCallback<T> = async (ctx) => {
+  const run: StepCallback<T> = async (ctx) => {
     try {
       this.emit("step:start", ctx);
       return await callback(ctx).then((output) => {
@@ -181,10 +182,10 @@ async function step<This, T extends Rpc.Serializable<T>>(
   };
 
   if (hasConfig) {
-    return await this.step.do(name, configOrCallback, wrappedCallback, options);
+    return this.step.do(name, configOrCallback, run, options);
   }
 
-  return await this.step.do(name, wrappedCallback, options);
+  return this.step.do(name, run, options);
 }
 
 async function sleep<This>(
@@ -192,36 +193,36 @@ async function sleep<This>(
   name: string,
   params: SleepParams,
 ): Promise<void> {
-  await this.step.do(`gait:sleep`, async (ctx) => {
-    try {
-      this.emit("sleep:start", { params, ...ctx });
+  const step = { name, count: 1 };
 
-      if (params instanceof Date) {
-        return await this.step
-          .sleepUntil(name, params)
-          .then(() => this.emit("sleep:complete", ctx));
-      } else if (typeof params === "number") {
-        return await this.step
-          .sleep(name, params)
-          .then(() => this.emit("sleep:complete", ctx));
-      } else if ("duration" in params) {
-        return await this.step
-          .sleep(name, params.duration)
-          .then(() => this.emit("sleep:complete", ctx));
-      } else {
-        return await this.step
-          .sleepUntil(name, params.timestamp)
-          .then(() => this.emit("sleep:complete", ctx));
-      }
-    } catch (error) {
-      this.emit("sleep:error", { error, ...ctx });
-      throw new NonRetryableWithRawError(
-        error,
-        `Gait sleep step "${name}" failed`,
-        "gait:sleep",
-      );
+  try {
+    this.emit("sleep:start", { params, step });
+
+    if (params instanceof Date) {
+      return await this.step
+        .sleepUntil(name, params)
+        .then(() => this.emit("sleep:complete", { step }));
+    } else if (typeof params === "number") {
+      return await this.step
+        .sleep(name, params)
+        .then(() => this.emit("sleep:complete", { step }));
+    } else if ("duration" in params) {
+      return await this.step
+        .sleep(name, params.duration)
+        .then(() => this.emit("sleep:complete", { step }));
+    } else {
+      return await this.step
+        .sleepUntil(name, params.timestamp)
+        .then(() => this.emit("sleep:complete", { step }));
     }
-  });
+  } catch (error) {
+    this.emit("sleep:error", { step, error });
+    throw new NonRetryableWithRawError(
+      error,
+      `Gait sleep step "${name}" failed`,
+      "gait:sleep",
+    );
+  }
 }
 
 async function event<This, T extends Rpc.Serializable<T>>(
@@ -229,20 +230,15 @@ async function event<This, T extends Rpc.Serializable<T>>(
   name: string,
   options: GaitEventOptions,
 ) {
-  const ctx = {
-    step: { name, count: 1 },
-    attempt: 1,
-    config: options.timeout ? { timeout: options.timeout } : {},
-  } satisfies WorkflowStepContext;
-
+  const step = { name, count: 1 };
   try {
-    this.emit("event:start", { options, ...ctx });
+    this.emit("event:start", { step, options });
     return await this.step.waitForEvent<T>(name, options).then((output) => {
-      this.emit("event:complete", { ...ctx, output });
+      this.emit("event:complete", { step, output });
       return output;
     });
   } catch (error) {
-    this.emit("event:error", { error, ...ctx });
+    this.emit("event:error", { step, error });
     throw new NonRetryableWithRawError(
       error,
       `Gait event step "${name}" failed`,
@@ -251,16 +247,13 @@ async function event<This, T extends Rpc.Serializable<T>>(
   }
 }
 
-type WithoutTimestamp<T> = T extends [
-  infer E,
-  infer C extends { timestamp: number },
-]
-  ? [E, Omit<C, "timestamp">]
-  : never;
-type EmitArgs = WithoutTimestamp<Args>;
+type OmitArgs = Values<{
+  [K in keyof Defs]: [e: K, ctx: Omit<Defs[K], "timestamp">];
+}>;
+
 function emit(
   this: Pick<GaitEmitterWorkerEntrypoint, "emit">,
-  ...[e, ctx]: EmitArgs
+  ...[e, ctx]: OmitArgs
 ) {
   return waitUntil(
     Promise.resolve(

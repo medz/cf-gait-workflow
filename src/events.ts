@@ -1,27 +1,40 @@
-import { WorkerEntrypoint, type WorkflowStepContext } from "cloudflare:workers";
-import type { Constructor, MaybePromise, Payload, Values } from "./utils";
+import {
+  WorkerEntrypoint,
+  type WorkflowStepContext,
+  type WorkflowStepEvent,
+} from "cloudflare:workers";
+import type { Constructor, MaybePromise, Values } from "./utils";
 
 export type GaitEventOptions = {
   type: string;
   timeout?: WorkflowSleepDuration | number;
 };
 
-type Defs = Record<"step:start" | "sleep:complete", {}> &
-  Record<"step:error" | "sleep:error" | "event:error", { error: unknown }> &
-  Record<"step:complete" | "event:complete", { output: unknown }> & {
-    "sleep:start": {
-      params:
-        | number
-        | Date
-        | { duration: WorkflowSleepDuration }
-        | { timestamp: Date | number };
-    };
-    "event:start": { options: GaitEventOptions };
-  };
+type BaseCtx = Pick<WorkflowStepContext, "step"> & { timestamp: number };
+type StepCtx<T extends {} = {}> = BaseCtx &
+  Omit<WorkflowStepContext, "step"> &
+  NonNullable<T>;
 
-type Ctx<T> = WorkflowStepContext & Payload<T> & { timestamp: number };
+export type Defs = {
+  "step:start": StepCtx;
+  "step:error": StepCtx<{ error: unknown }>;
+  "step:complete": StepCtx<{ output: unknown }>;
+  "event:start": BaseCtx & { options: GaitEventOptions };
+  "event:error": BaseCtx & { error: unknown };
+  "event:complete": BaseCtx & { output: WorkflowStepEvent<unknown> };
+  "sleep:start": BaseCtx & {
+    params:
+      | number
+      | Date
+      | { duration: WorkflowSleepDuration }
+      | { timestamp: Date | number };
+  };
+  "sleep:error": BaseCtx & { error: unknown };
+  "sleep:complete": BaseCtx;
+};
+
 export type Args = Values<{
-  [K in keyof Defs]: [e: K, ctx: Ctx<Defs[K]>];
+  [K in keyof Defs]: [e: K, ctx: Defs[K]];
 }>;
 
 export abstract class GaitEmitterWorkerEntrypoint<
