@@ -309,7 +309,11 @@ describe("gait.event", () => {
         type: "approval",
       });
 
-      expect(step.do).not.toHaveBeenCalled();
+      expect(step.do).toHaveBeenCalledWith(
+        "gait:event",
+        { timeout: "1 minute" },
+        expect.any(Function),
+      );
       expect(step.waitForEvent).toHaveBeenCalledWith("approval", {
         type: "approval",
         timeout: "1 minute",
@@ -352,7 +356,9 @@ describe("gait.event", () => {
         "event:start",
         "event:error",
       ]);
+      expect(events[0][1]).toMatchObject({ step: { count: 1 } });
       expect(events[1][1]).toMatchObject({ error: raw });
+      expect(events[2][1]).toMatchObject({ step: { count: 2 } });
     }, step);
   });
 });

@@ -230,21 +230,28 @@ async function event<This, T extends Rpc.Serializable<T>>(
   name: string,
   options: GaitEventOptions,
 ) {
-  const step = { name, count: 1 };
-  try {
-    this.emit("event:start", { step, options });
-    return await this.step.waitForEvent<T>(name, options).then((output) => {
-      this.emit("event:complete", { step, output });
-      return output;
-    });
-  } catch (error) {
-    this.emit("event:error", { step, error });
-    throw new NonRetryableWithRawError(
-      error,
-      `Gait event step "${name}" failed`,
-      "gait:event",
-    );
-  }
+  return this.step.do<any>(
+    "gait:event",
+    { timeout: options.timeout },
+    async (ctx) => {
+      const step = { name, count: ctx.step.count };
+      this.emit("event:start", { step, options });
+
+      try {
+        return await this.step.waitForEvent<T>(name, options).then((output) => {
+          this.emit("event:complete", { step, output });
+          return output;
+        });
+      } catch (error) {
+        this.emit("event:error", { step, error });
+        throw new NonRetryableWithRawError(
+          error,
+          `Gait event step "${name}" failed`,
+          "gait:event",
+        );
+      }
+    },
+  );
 }
 
 type OmitArgs = Values<{
