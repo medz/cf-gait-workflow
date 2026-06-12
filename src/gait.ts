@@ -231,7 +231,7 @@ async function event<This, T extends Rpc.Serializable<T>>(
   options: GaitEventOptions,
 ) {
   return this.step.do<any>(
-    "gait:event",
+    `gait:event/${name}`,
     { timeout: options.timeout },
     async (ctx) => {
       const step = { name, count: ctx.step.count };

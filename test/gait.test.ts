@@ -38,15 +38,17 @@ const defaultConfig = {
 };
 
 function createWorkflowStep(overrides: Partial<WorkflowStep> = {}) {
-  let count = 0;
+  const counts = new Map<string, number>();
   const step: WorkflowStep = {
     do: vi.fn(async (name: string, configOrCallback: unknown, callbackOrRollback?: unknown) => {
       const hasConfig = typeof configOrCallback !== "function";
       const config = hasConfig ? configOrCallback : defaultConfig;
       const callback = hasConfig ? callbackOrRollback : configOrCallback;
+      const count = (counts.get(name) ?? 0) + 1;
+      counts.set(name, count);
 
       return await (callback as (ctx: WorkflowStepContext) => Promise<unknown>)({
-        step: { name, count: ++count },
+        step: { name, count },
         attempt: 1,
         config: config as WorkflowStepConfig,
       });
@@ -310,7 +312,7 @@ describe("gait.event", () => {
       });
 
       expect(step.do).toHaveBeenCalledWith(
-        "gait:event",
+        "gait:event/approval",
         { timeout: "1 minute" },
         expect.any(Function),
       );
@@ -325,6 +327,44 @@ describe("gait.event", () => {
       });
       expect(events[1][1]).toMatchObject({
         output: { payload: { approved: true }, type: "approval" },
+      });
+    });
+  });
+
+  it("counts event waits by logical event name", async () => {
+    await withGait(async ({ events, step }) => {
+      const gait = createGait(step);
+
+      await gait.event("approval", { type: "approval", timeout: "1 minute" });
+      await gait.event("review", { type: "review", timeout: "1 minute" });
+      await gait.event("approval", { type: "approval", timeout: "1 minute" });
+
+      expect(step.do).toHaveBeenNthCalledWith(
+        1,
+        "gait:event/approval",
+        { timeout: "1 minute" },
+        expect.any(Function),
+      );
+      expect(step.do).toHaveBeenNthCalledWith(
+        2,
+        "gait:event/review",
+        { timeout: "1 minute" },
+        expect.any(Function),
+      );
+      expect(step.do).toHaveBeenNthCalledWith(
+        3,
+        "gait:event/approval",
+        { timeout: "1 minute" },
+        expect.any(Function),
+      );
+      expect(events[0][1]).toMatchObject({
+        step: { name: "approval", count: 1 },
+      });
+      expect(events[2][1]).toMatchObject({
+        step: { name: "review", count: 1 },
+      });
+      expect(events[4][1]).toMatchObject({
+        step: { name: "approval", count: 2 },
       });
     });
   });
